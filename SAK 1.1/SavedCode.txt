@@ -1,0 +1,451 @@
+            //Obtains the date from the text box
+            string date = dateTextBox.Text;
+
+            //The code will execute, and if an exception happens, the Invalid Date
+            //label will light up
+            try
+            {
+                //Cleans global values so they don´t accumulate
+                day = month = year = "";
+
+                //Counter to determine which set of characters belong on each category
+                //0=days;
+                //1=months;
+                //2=years;
+                int cont = 0;
+                for (int i = 0; i < date.Length; i++)
+                {
+                    //if the character isn´t a number
+                    if (date[i] == '/')
+                    {
+                        //counter increases, switching to a different category
+                        cont++;
+                        //skips to the next character on the string
+                        i++;
+                    }
+                    switch (cont)
+                    {
+                        case 0:
+                            day = day + date[i];
+                            break;
+                        case 1:
+                            month = month + date[i];
+                            break;
+                        case 2:
+                            year = year + date[i];
+                            break;
+                    }
+                }
+
+                //Now with our day, month and year set, we can check if they have any issues
+                //regarding the date.
+                //We establish the API library with all of our date functions
+                API api = new API();
+
+                //We turn our strings into integers, and make sure they´re above 0
+                int dayInt = api.aboveZero(int.Parse(day));
+                int monthInt = api.aboveZero(int.Parse(month));
+                int yearInt = int.Parse(year);
+
+                //We make sure the day and month are correct
+                monthInt = api.monthCorrected(monthInt);
+                dayInt=api.dayCorrected(dayInt, monthInt, yearInt);
+
+                //We turn the integers back to strings for the global variables
+                day = extraZero(dayInt.ToString());
+                month = extraZero(monthInt.ToString());
+                year = yearInt.ToString();
+
+                //Get the new date to apply to the text box
+                date = day + month + year;
+                dateTextBox.Text = date;
+
+                //Set invalidDateLabel to not visible
+                invalidDateLabel.Visible = false;
+            } 
+
+            //If the date selected by the user causes an error, the Invalid Date
+            //label will show up
+            catch(Exception ex) when (ex is System.FormatException || ex is System.IndexOutOfRangeException) 
+            {
+                invalidDateLabel.Visible = true;
+            }
+
+
+            ----------
+
+
+                        //Obtains the time from the text box
+            string time = timeTextBox.Text;
+
+            //Cleans global values so that they don´t accumulate
+            hour = minute = second = "";
+
+            //Counter to determine which set of characters belong on each category
+            //0=hour;
+            //1=minute;
+            //2=second;
+            int cont = 0;
+            for (int i = 0; i < time.Length; i++)
+            {
+                //If the character isn´t a number
+                if (time[i] == ':')
+                {
+                    //Counter increases, moving onto the next global variable
+                    cont++;
+                    //Skips past to the next character on the string
+                    i++;
+                }
+                switch (cont)
+                {
+                    case 0:
+                        hour = hour + time[i];
+                        break;
+                    case 1:
+                        minute = minute + time[i];
+                        break;
+                    case 2:
+                        second = second + time[i];
+                        break;
+                }
+
+                //Now with our global variables set, we update them accordingly
+                timeCorrector();
+            }
+
+
+
+
+            ----------
+
+
+
+
+
+            public partial class TimeGenerator : Form
+    {
+        //Day, Month and Year
+        public static string day, month, year;
+
+        //Hour, Minutes and Seconds
+        public static string hour, minute, second;
+
+        public TimeGenerator()
+        {
+            InitializeComponent();
+            invalidDateLabel.Visible= false;
+            invalidTimeLabel.Visible= false;
+        }
+
+
+        //Button that enables the calendar
+        private void button1_Click(object sender, EventArgs e)
+        {
+            calendar.Visible = true;
+        }
+
+        
+        //Updates the set date whenever the mouse leaves the text box.
+        //This function exists so that no wrong dates are written down by the user.
+        //Should this happen, this event will update them accordingly
+        private void dateTextBox_MouseLeave(object sender, EventArgs e)
+        {
+            //Obtains the date from the text box
+            string date = dateTextBox.Text;
+
+            //If the written date is valid
+            if (DateTime.TryParse(date, out DateTime parsedDate))
+            {
+                //Update the global variables
+                day = extraZero(parsedDate.Day.ToString());
+                month = extraZero(parsedDate.Month.ToString());
+                year = parsedDate.Year.ToString();
+
+                //change the invalidDateLabel
+                invalidDateLabel.Visible = false;
+
+                //Update the text box
+                dateTextBox.Text = day + month + year;
+            }
+
+            //if the date written isn´t valid
+            else
+            {
+                //initialize api to get the getStringFromGroup method
+                API api = new API();
+
+                //Try to get values from the current text box
+                try
+                {
+                    int iYear = int.Parse(api.getStringFromGroup(date, '/', 2));
+                    int iMonth = int.Parse(api.getStringFromGroup(date, '/', 1));
+                    int iDay = int.Parse(api.getStringFromGroup(date, '/', 0));
+
+                    //Update values
+                    iMonth = monthCorrected(iMonth);
+                    iDay = dayCorrected(iDay, iMonth, iYear);
+
+                    //Load them to the global variables
+                    day = extraZero(iDay.ToString());
+                    month = extraZero(iMonth.ToString());
+                    year = extraZero(iYear.ToString());
+
+                    //change the invalidDateLabel
+                    invalidDateLabel.Visible = false;
+
+                    //Update the text box
+                    dateTextBox.Text = day + month + year;
+                }
+
+                //If the values aren´t comprehensible
+                catch
+                {
+                    invalidDateLabel.Visible = true;
+                }
+
+            }
+        }
+
+
+        //Updates the set time whenever the mouse leaves the text box.
+        //The time has to be written down by the user, and multiple checks have been coded
+        //So that no wrong times pass by.
+        private void timeTextBox_MouseLeave(object sender, EventArgs e)
+        {
+            //Obtains the time written down by the user
+            string time = timeTextBox.Text;
+
+            if (DateTime.TryParse(time, out DateTime parsedTime))
+            {
+                //Updates global variables
+                hour = extraZero(parsedTime.Hour.ToString());
+                minute = extraZero(parsedTime.Minute.ToString());
+                second = extraZero(parsedTime.Second.ToString());
+
+                //change the invalidTimeLabel
+                invalidTimeLabel.Visible = false;
+
+                //Update the text box
+                timeTextBox.Text = hour + minute + second;
+            }
+            else 
+            {
+                //initialize api to get the getStringFromGroup method
+                API api = new API();
+
+                //Try to get values from the current text box
+                try
+                {
+                    int iHour = int.Parse(api.getStringFromGroup(time,':',0));
+                    int iMinute = int.Parse(api.getStringFromGroup(time, ':', 1));
+                    int iSecond = int.Parse(api.getStringFromGroup(time, ':', 2));
+
+                    //Apply corrections via timeCorrector method
+                    timeCorrector(iHour,iMinute,iSecond);
+                }
+
+                catch 
+                {
+                    invalidTimeLabel.Visible = true;
+                }
+            }
+
+        }
+
+        private void helpToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            API api = new API();
+
+            string text = "Day: " + day
+                +"Month: "+month
+                +"Year: "+year
+                +"Hour: "+hour
+                +"Minute: "+minute
+                +"Second: "+second;
+            string title = "Global Variables for Debug";
+            string button = "Okie Dokie";
+
+            api.messageBoxSimple(text, title, button);
+        }
+
+
+        //If the mouse leaves the calendar, it dissapears
+        private void calendar_MouseLeave(object sender, EventArgs e)
+        {
+            calendar.Visible = false;
+        }
+
+
+        //Setting the date from the calendar
+        //The user clicks the button to open the calendar, then selects their date
+        private void calendar_DateSelected(object sender, DateRangeEventArgs e)
+        {
+            //Get date from calendar
+            DateTime dt = calendar.SelectionRange.Start;
+
+            //Set day. Apply extra 0 in front if <2
+            day = extraZero(dt.Day.ToString());
+
+            //Set month. Apply extra 0 in front if <2
+            month = extraZero(dt.Month.ToString());
+
+            //Set year.
+            year = dt.Year.ToString();
+
+            //Combine all strings into 1
+            string dateSelected = day + month + year;
+
+            //Insert date onto the text box
+            dateTextBox.Text = dateSelected;
+
+            //Remove calendar
+            calendar.Visible = false;
+
+            //Set invalidDateLabel to not visible
+            invalidDateLabel.Visible = false;
+        }
+
+
+
+        //--------------------------------------------------------------
+        //FUNCTIONS
+
+        //Add an extra 0 to the string when necessary
+        public string extraZero(string s) 
+        {
+            if (s.Length < 2) 
+            {
+                s = "0" + s;
+            }
+            return s;
+        }
+
+        public bool isLeapYear(int a)
+        {
+            bool answer = false;
+            if (a % 4 == 0)
+            {
+                answer = true;
+            }
+            return answer;
+        }
+
+        public int aboveZero(int a)
+        {
+            if (a < 1) { a = 1; }
+            return a;
+        }
+
+        public int fourDigitYear(int a)
+        {
+            if (a < 1000)
+            {
+                a = 1000;
+            }
+            return a;
+        }
+
+        public int monthCorrected(int a)
+        {
+            if (a > 12) { a = 12; }
+            return aboveZero(a);
+        }
+
+        public int dayCorrected(int day, int month, int year)
+        {
+            //Depending on the month
+            switch (month)
+            {
+                case 1:
+                case 3:
+                case 5:
+                case 7:
+                case 8:
+                case 10:
+                case 12:
+                    if (day > 31) { day = 31; }
+                    break;
+
+                case 4:
+                case 6:
+                case 9:
+                case 11:
+                    if (day > 30) { day = 30; }
+                    break;
+
+                case 2:
+                    if (day > 28)
+                    {
+                        if (isLeapYear(year) == true)
+                        {
+                            day = 29;
+                        }
+                        else
+                        {
+                            day = 28;
+                        }
+                    }
+                    break;
+            }
+            return aboveZero(day);
+        }
+
+        //Arranges the time accordingly
+        //This is gonna be a deusy
+        public void timeCorrector(int iHour, int iMinute, int iSecond) 
+        {
+            //In case the extra hours are great enough to add extra days to the previously selected date
+            int extraDays = 0;
+
+            //Fix seconds
+            if (iSecond > 59) 
+            {
+                iSecond -= 60;
+                iMinute++;
+            }
+
+            //Fix minutes
+            if (iMinute > 59) 
+            {
+                iMinute -= 60;
+                iHour++;
+            }
+
+            //Fix hour
+            while (iHour > 23) 
+            {
+                iHour-=24;
+                extraDays++;
+            }
+
+            //If there were any extra days, update the date
+            if (extraDays != 0) 
+            {
+                //initialize api to get the messagebox
+                API api = new API();
+
+                //Messagebox values
+                string extraText = " extra days have been added to the selected date!";
+                if (extraDays == 1)
+                {
+                    extraText = " extra day has been added to the selected date!";
+                }
+                string text = "Due to the inputted date, "+extraDays+extraText;
+                string title = "Date Modification Notice";
+                string ok = "Sure thing boss!";
+                api.messageBoxSimple(text,title,ok);
+            }
+
+            //Update global variables
+            hour = extraZero(iHour.ToString());
+            minute = extraZero(iMinute.ToString());
+            second = extraZero(iSecond.ToString());
+
+            //Change the invalidTimeLabel
+            invalidTimeLabel.Visible=false;
+
+            //Update textbox
+            timeTextBox.Text = hour+minute+second;
+        }
+    }
+            
